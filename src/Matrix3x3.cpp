@@ -106,18 +106,35 @@ double Matrix3x3::Trace() const
 bool Matrix3x3::IsRotation() const
 {
     //TODO
+    Matrix3x3 C;
+    Matrix3x3 T;
+    T = T.Transposed();
+    Matrix3x3 TM = T.Multiply(TM);
+    Matrix3x3 I = I.Identity();
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++){
-            if(i ){}
+            if(TM.At(i, j) != I.At(i, j)) {
+                return false;
+            }
+            else {
+				return true;
+            }
         }
     }
 
-    return false;
+    if (C.Det() != 1.0) {
+        return false;
+	}
+    else {
+		return true;
+    }
+
 }
 
 Matrix3x3 Matrix3x3::RotationAxisAngle(const Vec3& u_in, double phi)
 {
     //TODO
+
     return {};
 }
 
