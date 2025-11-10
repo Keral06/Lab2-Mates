@@ -1,4 +1,4 @@
-#include "Matrix3x3.hpp"
+﻿#include "Matrix3x3.hpp"
 #include <stdexcept>
 
 #define TOL 1e-6
@@ -134,14 +134,38 @@ bool Matrix3x3::IsRotation() const
 Matrix3x3 Matrix3x3::RotationAxisAngle(const Vec3& u_in, double phi)
 {
     //TODO
+    //R = (first)I cos ϕ + (second)(1 − cos ϕ) uuT + (third)[u]× sin ϕ
+    Matrix3x3 C;
+	Vec3 eje = u_in.Normalize();
+    double u[3] = { eje.x, eje.y, eje.z };
+    double K[3][3] = {
+    { 0.0, -eje.z,  eje.y },
+    {  eje.z, 0.0, -eje.x },
+    { -eje.y,  eje.x, 0.0 }
+    };
+    for (int i = 0; i < 3 ; i++) {
+        for (int j = 0; j < 3; j++) {
+            double first;
+            if (i == j) {
+                first = 1 * cos(phi);
+            }
+            else {
+                first = 0.0;
+            }
+			double second = (1.0 - cos(phi)) * u[i] * u[j];
+            double third = sin(phi) * K[i][j];
+            C.At(i, j) = first + second + third;
+        }
+    }
 
-    return {};
+    return C;
 }
 
 Vec3 Matrix3x3::Rotate(const Vec3& v, OpsCounter* op) const
 {
     //TODO
-    return {};
+	Vec3 result = Multiply(v, op);
+    return result;
 }
 
 void Matrix3x3::ToAxisAngle(Vec3& axis, double& angle) const
