@@ -170,11 +170,27 @@ Vec3 Matrix3x3::Rotate(const Vec3& v, OpsCounter* op) const
 
 void Matrix3x3::ToAxisAngle(Vec3& axis, double& angle) const
 {
+	
+
+	double trace = Trace();
+	angle = acos((trace - 1) / 2.0);
+	//pone que si es 180 o 0 es un caso especial pero no diu res de com fer-ho la presentacion
+	
+    axis.x = (At(2, 1) - At(1, 2)) / (2 * sin(angle));
+    axis.y = (At(0, 2) - At(2, 0)) / (2 * sin(angle));
+    axis.z = (At(1, 0) - At(0, 1)) / (2 * sin(angle));
     //TODO
 }
 
 Matrix3x3 Matrix3x3::FromEulerZYX(double yaw, double pitch, double roll)
 {
+    //yaw = rotación sobre Z
+
+    //pitch = rotación sobre Y
+
+    //roll = rotación sobre X
+    // 
+    
     //TODO
     return {};
 }
