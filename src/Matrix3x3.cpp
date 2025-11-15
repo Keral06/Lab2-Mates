@@ -185,17 +185,55 @@ void Matrix3x3::ToAxisAngle(Vec3& axis, double& angle) const
 Matrix3x3 Matrix3x3::FromEulerZYX(double yaw, double pitch, double roll)
 {
     //yaw = rotación sobre Z
-
+	OpsCounter* op = nullptr;
     //pitch = rotación sobre Y
 
     //roll = rotación sobre X
     // 
-    
+	Matrix3x3 Rx; // rotación sobre X 
+	Rx.m[0] = 1;
+    Rx.m[1] = 0;
+    Rx.m[2] = 0;
+	Rx.m[3] = 0;   
+	Rx.m[4] = cos(roll);
+    Rx.m[5] = -sin(roll);
+	Rx.m[6] = 0;
+	Rx.m[7] = sin(roll);
+	Rx.m[8] = cos(roll);
+	Matrix3x3 Ry; // rotación sobre Y
+	Ry.m[0] = cos(pitch);
+	Ry.m[1] = 0;
+	Ry.m[2] = sin(pitch);
+	Ry.m[3] = 0;
+	Ry.m[4] = 1;
+	Ry.m[5] = 0;
+	Ry.m[6] = -sin(pitch);
+	Ry.m[7] = 0;
+	Ry.m[8] = cos(pitch);
+	Matrix3x3 Rz; // rotación sobre Z
+	Rz.m[0] = cos(yaw);
+	Rz.m[1] = -sin(yaw);
+	Rz.m[2] = 0;
+	Rz.m[3] = sin(yaw);
+	Rz.m[4] = cos(yaw);
+	Rz.m[5] = 0;
+	Rz.m[6] = 0;
+	Rz.m[7] = 0;
+	Rz.m[8] = 1;
+    Matrix3x3 R;
+    R = Rz.Multiply(Ry, op);
+
+
     //TODO
-    return {};
+    return R.Multiply(Rx,op);
 }
 
 void Matrix3x3::ToEulerZYX(double& yaw, double& pitch, double& roll) const
 {
+
+	//para encontrar yaw, podemos usar que Rz.m[0]=cos(yaw) (At 0,0), para pitch R.m[8]=cos(pitch) At(2,2) y para roll R.m[4]=cos(roll) (At(1,1))
+	yaw = acos(At(0, 0));
+	pitch = acos(At(2, 2));
+	roll = acos(At(1, 1));
     //TODO
 }
