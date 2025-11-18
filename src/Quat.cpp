@@ -66,16 +66,18 @@ Quat Quat::FromMatrix3x3(const Matrix3x3& R)
 	//primero busco el trace
 	double trace = R.Trace();
 	//si el trace es mayor que 0
-	if (trace > 0) {
-		double S = 2.0 * std::sqrt(trace + 1.0)/4;
+	if (trace > 0.0) {
+		// S = sqrt(trace + 1.0) * 2; // S = 4 * s
+		// s = 0.25 * S;
+		// x = (R.At(2, 1) - R.At(1, 2)) / S;
+		// y = (R.At(0, 2) - R.At(2, 0)) / S;
+		// z = (R.At(1, 0) - R.At(0, 1)) / S;
 
-		answer.s = S / 4;
-		answer.x = R.At(2, 1) - R.At(1, 2) / S;
-		answer.y = R.At(0, 2) - R.At(2, 0) / S;
-		answer.z = R.At(1, 0) - R.At(0, 1) / S;
-		return answer;
-	
-	
+		double S = std::sqrt(trace + 1.0) * 2.0;
+		answer.s = 0.25 * S;
+		answer.x = (R.At(2, 1) - R.At(1, 2)) / S;
+		answer.y = (R.At(0, 2) - R.At(2, 0)) / S;
+		answer.z = (R.At(1, 0) - R.At(0, 1)) / S;
 	}
 	//si R00 es el mas grande
 	if(R.At(0,0) > R.At(1,1) && R.At(0,0) > R.At(2,2)){
@@ -130,6 +132,9 @@ Quat Quat::FromAxisAngle(const Vec3& u_in, double phi)
     //TODO
 	// hay una formula vale q= cos(2ϕ​), ux​sin(2ϕ​), uy​sin(2ϕ​), uz​sin(2ϕ​)
 	Quat Q;
+	double half_phi = phi / 2.0;
+	double s_half = sin(half_phi);
+	Q.s = cos(half_phi);
 	Q.x = u_in.x * sin(phi / 2);
 	Q.y = u_in.y * sin(phi / 2);
 	Q.z = u_in.z * sin(phi / 2);
@@ -142,9 +147,23 @@ void Quat::ToAxisAngle(Vec3& axis, double& angle) const
 	//lo contrario que el anterior, hay una formulaa
 	// ϕ=2arccos(w)
 	// y el eje axis=(x,y,z)/sin(ϕ/2)
-	angle = 2 * acos(s)​;
-	axis.x = x / sin(angle / 2);
-	axis.y = y / sin(angle / 2);
-	axis.z = z / sin(angle / 2);
+	angle = 2.0 * acos(s);
 
+	double s_half = sin(angle / 2.0);
+
+	if (s_half == 0.0) // Comparación directa
+	{
+		// Rotación identidad
+		angle = 0.0;
+		axis.x = 1.0;
+		axis.y = 0.0;
+		axis.z = 0.0;
+	}
+	else
+	{
+		// RIESGO: División por cero si s_half es ~0 pero no exacto
+		axis.x = x / s_half;
+		axis.y = y / s_half;
+		axis.z = z / s_half;
+	}
 }

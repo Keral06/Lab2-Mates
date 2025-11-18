@@ -70,7 +70,7 @@ double Matrix3x3::Det() const
     
 
     double det_suma = (m[0] * m[4] * m[8]) + (m[1] * m[5] * m[6]) + (m[2] * m[3] * m[7]);
-    double det_resta = (m[2] * m[4] * m[6]) - (m[1] * m[3] * m[8]) - (m[5] * m[7] * m[0]);
+    double det_resta = (m[2] * m[4] * m[6]) + (m[1] * m[3] * m[8]) + (m[5] * m[7] * m[0]);
     double resultat = det_suma - det_resta;
     
     return resultat;
@@ -82,7 +82,7 @@ Matrix3x3 Matrix3x3::Transposed() const
     Matrix3x3 C;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            C.At(i, j) = At(i, j);
+            C.At(i, j) = At(j, i);
         }
         
     }
@@ -92,15 +92,8 @@ Matrix3x3 Matrix3x3::Transposed() const
 double Matrix3x3::Trace() const
 {
     //TODO
-    double resultat = 0.0;
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            if (j = i) {
-                resultat = resultat + m[(i + j )* 2];
-            }
-        }
-    }
-    return resultat;
+    double trace = At(0, 0) + At(1, 1) + At(2, 2);
+    return trace;
 }
 
 bool Matrix3x3::IsRotation() const
@@ -108,26 +101,23 @@ bool Matrix3x3::IsRotation() const
     //TODO
     Matrix3x3 C;
     Matrix3x3 T;
-    T = T.Transposed();
-    Matrix3x3 TM = T.Multiply(TM);
-    Matrix3x3 I = I.Identity();
+    T = this->Transposed();
+    Matrix3x3 TM = T.Multiply(*this);
+    Matrix3x3 I = Matrix3x3::Identity();
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++){
             if(TM.At(i, j) != I.At(i, j)) {
                 return false;
             }
-            else {
-				return true;
-            }
         }
     }
 
-    if (C.Det() != 1.0) {
+    if (this->Det() != 1.0) {
         return false;
 	}
-    else {
-		return true;
-    }
+	
+    return true;
+ 
 
 }
 
@@ -170,16 +160,49 @@ Vec3 Matrix3x3::Rotate(const Vec3& v, OpsCounter* op) const
 
 void Matrix3x3::ToAxisAngle(Vec3& axis, double& angle) const
 {
-	
+    
 
 	double trace = Trace();
 	angle = acos((trace - 1) / 2.0);
 	//pone que si es 180 o 0 es un caso especial pero no diu res de com fer-ho la presentacion
-	
-    axis.x = (At(2, 1) - At(1, 2)) / (2 * sin(angle));
-    axis.y = (At(0, 2) - At(2, 0)) / (2 * sin(angle));
-    axis.z = (At(1, 0) - At(0, 1)) / (2 * sin(angle));
+    double s_angle = sin(angle);
+
+    if (s_angle == 0.0)
+    {
+        if (angle == 0.0) { // caso 0 grados
+            angle = 0.0;
+            axis.x = 1.0; axis.y = 0.0; axis.z = 0.0;
+        }
+        else { // caso 180 grados
+            angle = PI;
+            double xx = (At(0, 0) + 1.0) / 2.0;
+            double yy = (At(1, 1) + 1.0) / 2.0;
+            double zz = (At(2, 2) + 1.0) / 2.0;
+            double xy = (At(0, 1) + At(1, 0)) / 4.0;
+            double xz = (At(0, 2) + At(2, 0)) / 4.0;
+            double yz = (At(1, 2) + At(2, 1)) / 4.0;
+
+            if (xx > yy && xx > zz) {
+                axis.x = std::sqrt(xx); axis.y = xy / axis.x; axis.z = xz / axis.x;
+            }
+            else if (yy > zz) {
+                axis.y = std::sqrt(yy); axis.x = xy / axis.y; axis.z = yz / axis.y;
+            }
+            else {
+                axis.z = std::sqrt(zz); axis.x = xz / axis.z; axis.y = yz / axis.z;
+            }
+        }
+    }
+    else
+    {
+        double div = 2.0 * s_angle;
+        axis.x = (At(2, 1) - At(1, 2)) / div;
+        axis.y = (At(0, 2) - At(2, 0)) / div;
+        axis.z = (At(1, 0) - At(0, 1)) / div;
+        axis = axis.Normalize();
+    }
     //TODO
+
 }
 
 Matrix3x3 Matrix3x3::FromEulerZYX(double yaw, double pitch, double roll)
@@ -231,9 +254,32 @@ Matrix3x3 Matrix3x3::FromEulerZYX(double yaw, double pitch, double roll)
 void Matrix3x3::ToEulerZYX(double& yaw, double& pitch, double& roll) const
 {
 
-	//para encontrar yaw, podemos usar que Rz.m[0]=cos(yaw) (At 0,0), para pitch R.m[8]=cos(pitch) At(2,2) y para roll R.m[4]=cos(roll) (At(1,1))
-	yaw = acos(At(0, 0));
-	pitch = acos(At(2, 2));
-	roll = acos(At(1, 1));
+	
+    double sp = -At(2, 0);
+
+    if (sp >= 1.0) {
+        pitch = PI / 2.0; // 90 grados
+    }
+    else if (sp <= -1.0) {
+        pitch = -PI / 2.0; // -90 grados
+    }
+    else {
+        pitch = asin(sp);
+    }
+
+    double cp = cos(pitch);
+
+    if (cp != 0)
+    {
+        yaw = atan2(At(1, 0), At(0, 0));
+
+        roll = atan2(At(2, 1), At(2, 2));
+    }
+    else
+    {
+        roll = 0.0;
+
+        yaw = atan2(-At(0, 1), At(1, 1));
+    }
     //TODO
 }
