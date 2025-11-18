@@ -45,6 +45,7 @@ Vec3 Matrix3x3::Multiply(const Vec3& x, OpsCounter* op) const
     y.y = At(1, 0) * x.x + At(1, 1) * x.y + At(1, 2) * x.z;
     y.z = At(2, 0) * x.x + At(2, 1) * x.y + At(2, 2) * x.z;
     if (op) { op->IncMul(9); op->IncAdd(6); }
+
     return y;
 }
 
@@ -79,7 +80,7 @@ double Matrix3x3::Det() const
 Matrix3x3 Matrix3x3::Transposed() const
 {
     //TODO
-    Matrix3x3 C;
+    Matrix3x3 C{};
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             C.At(i, j) = At(j, i);
@@ -98,57 +99,48 @@ double Matrix3x3::Trace() const
 
 bool Matrix3x3::IsRotation() const
 {
-    //TODO
-    Matrix3x3 C;
-    Matrix3x3 T;
-    T = this->Transposed();
+    Matrix3x3 T = this->Transposed();
     Matrix3x3 TM = T.Multiply(*this);
     Matrix3x3 I = Matrix3x3::Identity();
+
+    
     for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++){
-            if(TM.At(i, j) != I.At(i, j)) {
+        for (int j = 0; j < 3; j++) {
+            if (std::abs(TM.At(i, j) - I.At(i, j)) > 1e-6) //es la tolerancia que hay el 1e-6
                 return false;
-            }
         }
     }
 
-    if (this->Det() != 1.0) {
+    if (std::abs(this->Det() - 1.0) > 1e-6)
         return false;
-	}
-	
-    return true;
- 
 
+    return true;
 }
 
 Matrix3x3 Matrix3x3::RotationAxisAngle(const Vec3& u_in, double phi)
 {
     //TODO
     //R = (first)I cos ϕ + (second)(1 − cos ϕ) uuT + (third)[u]× sin ϕ
-    Matrix3x3 C;
-	Vec3 eje = u_in.Normalize();
-    double u[3] = { eje.x, eje.y, eje.z };
-    double K[3][3] = {
-    { 0.0, -eje.z,  eje.y },
-    {  eje.z, 0.0, -eje.x },
-    { -eje.y,  eje.x, 0.0 }
-    };
-    for (int i = 0; i < 3 ; i++) {
-        for (int j = 0; j < 3; j++) {
-            double first;
-            if (i == j) {
-                first = 1 * cos(phi);
-            }
-            else {
-                first = 0.0;
-            }
-			double second = (1.0 - cos(phi)) * u[i] * u[j];
-            double third = sin(phi) * K[i][j];
-            C.At(i, j) = first + second + third;
-        }
-    }
 
-    return C;
+    Vec3 u = u_in.Normalize();
+    double c = cos(phi);
+    double s = sin(phi);
+    double t = 1.0 - c;
+
+    Matrix3x3 R;
+    R.At(0, 0) = t * u.x * u.x + c;
+    R.At(0, 1) = t * u.x * u.y - s * u.z;
+    R.At(0, 2) = t * u.x * u.z + s * u.y;
+
+    R.At(1, 0) = t * u.x * u.y + s * u.z;
+    R.At(1, 1) = t * u.y * u.y + c;
+    R.At(1, 2) = t * u.y * u.z - s * u.x;
+
+    R.At(2, 0) = t * u.x * u.z - s * u.y;
+    R.At(2, 1) = t * u.y * u.z + s * u.x;
+    R.At(2, 2) = t * u.z * u.z + c;
+
+    return R;
 }
 
 Vec3 Matrix3x3::Rotate(const Vec3& v, OpsCounter* op) const
@@ -161,7 +153,8 @@ Vec3 Matrix3x3::Rotate(const Vec3& v, OpsCounter* op) const
 void Matrix3x3::ToAxisAngle(Vec3& axis, double& angle) const
 {
     
-
+  
+    if (!IsRotation()) { throw std::invalid_argument("ToAxisAngle: It's not a rotation"); }
 	double trace = Trace();
 	angle = acos((trace - 1) / 2.0);
 	//pone que si es 180 o 0 es un caso especial pero no diu res de com fer-ho la presentacion
@@ -214,35 +207,34 @@ Matrix3x3 Matrix3x3::FromEulerZYX(double yaw, double pitch, double roll)
     //roll = rotación sobre X
     // 
 	Matrix3x3 Rx; // rotación sobre X 
-	Rx.m[0] = 1;
-    Rx.m[1] = 0;
-    Rx.m[2] = 0;
-	Rx.m[3] = 0;   
-	Rx.m[4] = cos(roll);
-    Rx.m[5] = -sin(roll);
-	Rx.m[6] = 0;
-	Rx.m[7] = sin(roll);
-	Rx.m[8] = cos(roll);
+    Rx.At(0, 0) = 1; 
+    Rx.At(0, 1) = 0;  
+    Rx.At(0, 2) = 0;
+    Rx.At(1, 0) = 0; 
+    Rx.At(1, 1) = cos(roll);
+    Rx.At(1, 2) = -sin(roll);
+    Rx.At(2, 0) = 0;
+    Rx.At(2, 1) = sin(roll);
+    Rx.At(2, 2) = cos(roll);
 	Matrix3x3 Ry; // rotación sobre Y
-	Ry.m[0] = cos(pitch);
-	Ry.m[1] = 0;
-	Ry.m[2] = sin(pitch);
-	Ry.m[3] = 0;
-	Ry.m[4] = 1;
-	Ry.m[5] = 0;
-	Ry.m[6] = -sin(pitch);
-	Ry.m[7] = 0;
-	Ry.m[8] = cos(pitch);
+    Ry.At(0, 0) = cos(pitch); 
+    Ry.At(0, 1) = 0; 
+    Ry.At(0, 2) = sin(pitch);
+    Ry.At(1, 0) = 0;   
+    Ry.At(1, 1) = 1;
+    Ry.At(1, 2) = 0;
+    Ry.At(2, 0) = -sin(pitch);
+    Ry.At(2, 1) = 0; 
+    Ry.At(2, 2) = cos(pitch);
 	Matrix3x3 Rz; // rotación sobre Z
-	Rz.m[0] = cos(yaw);
-	Rz.m[1] = -sin(yaw);
-	Rz.m[2] = 0;
-	Rz.m[3] = sin(yaw);
-	Rz.m[4] = cos(yaw);
-	Rz.m[5] = 0;
-	Rz.m[6] = 0;
-	Rz.m[7] = 0;
-	Rz.m[8] = 1;
+    Rz.At(0, 0) = cos(yaw); 
+    Rz.At(0, 1) = -sin(yaw); 
+    Rz.At(0, 2) = 0;
+    Rz.At(1, 0) = sin(yaw);
+    Rz.At(1, 1) = cos(yaw);
+    Rz.At(1, 2) = 0;
+    Rz.At(2, 0) = 0;       
+    Rz.At(2, 1) = 0;          Rz.At(2, 2) = 1;
     Matrix3x3 R;
     R = Rz.Multiply(Ry, op);
 
