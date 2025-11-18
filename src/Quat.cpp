@@ -30,7 +30,10 @@ Quat Quat::Multiply(const Quat& b, OpsCounter* op) const
 	Solucion.x = s * b.x + x * b.s + y * b.z - z * b.y;
 	Solucion.y = s * b.y - x * b.z + y * b.s + z * b.x;
 	Solucion.z = s * b.z + x * b.y - y * b.x + z * b.s;
-	op += 7 * 4;
+	if (op) {
+		op->mul += 16;
+		op->add += 12;
+	}
     return Solucion;
 }
 
@@ -45,19 +48,20 @@ Vec3 Quat::Rotate(const Vec3& v, OpsCounter* op) const
 	t.x = 2 *(y * v.z - z * v.y);
 	t.y = 2*(z * v.x - x * v.z);
 	t.z = 2*(x * v.y - y * v.x);
-	op += 6;
 	//aqui hago el qxt
 	Vec3 qxt;
 	qxt.x = y * t.z - z * t.y;
 	qxt.y = z * t.x - x * t.z;
 	qxt.z = x * t.y - y * t.x;
 	// 2. v′=v+st+q×t
-	op += 6;
 	Vec3 Rotada;
 	Rotada.x = v.x + s * t.x + qxt.x;
 	Rotada.y = v.y + s * t.y + qxt.y;
 	Rotada.z = v.z + s * t.z + qxt.z;
-	op += 3;
+	if (op) {
+		op->mul += 18;
+		op->add += 12;
+	}
     return Rotada;
 }
 
